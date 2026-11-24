@@ -6,10 +6,16 @@
  * and streams them to the browser via localhost.
  * 
  * In production (Vercel), the browser uses direct URLs — no proxying needed.
+ * 24-11-2027 | Aditya | Disabled the local-dev image proxy in production (NODE_ENV === "production") so 
+ product images load directly from Cloudflare Workers without wasting Vercel function invocations or bandwidth.
  */
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
+	 if (process.env.NODE_ENV === "production") // Aditya 24/11/2027
+	 {
+		return new NextResponse("Image proxy disabled in production", { status: 404 });
+	 }
   const url = request.nextUrl.searchParams.get("url");
 
   if (!url) {
