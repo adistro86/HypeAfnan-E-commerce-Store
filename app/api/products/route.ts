@@ -1,5 +1,10 @@
+/*24-11-2027 | Aditya | Added a 10-minute edge cache (s-maxage=600, stale-while-revalidate=3600) so Vercel serves repeat shoppers from its free CDN 
+instead of waking up a serverless function and re-querying Sanity on every single page load or scroll.
+*/
+
 import { NextRequest, NextResponse } from "next/server";
-export const revalidate = 0; // force fresh reads
+//export const revalidate = 0; // force fresh reads - Aditya 24/11/2027
+export const revalidate = 600;
 import { getAllProducts } from "../../lib/getProducts";
 import productTagsData from "../../data/product_tags.json";
 import tagMapData from "../../data/tag_map.json";
@@ -194,7 +199,8 @@ export async function GET(req: NextRequest) {
     {
       status: 200,
       headers: {
-        "Cache-Control": "public, max-age=0, must-revalidate"
+        //"Cache-Control": "public, max-age=0, must-revalidate" - Aditya 24/11/2027
+		"Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
       },
     }
   );
