@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import HomeClient from "../components/HomeClient";
 import { getAllProducts } from "../lib/getProducts";
 import { getSanityProducts } from "../../sanity/client";
@@ -10,7 +10,14 @@ export const revalidate = 3600;
 
 const PAGE_LIMIT = 300;
 
-export default async function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
   const t = await getTranslations("contactBanner");
   const tHero = await getTranslations("hero");
 
