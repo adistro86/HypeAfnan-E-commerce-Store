@@ -1,0 +1,40 @@
+# Daily "deployed = code" canary for hypeAfnan production.
+# Born from the 2026-11-26 live probe: production was running a build that
+# predated the Nov 25 cache-fix commits (see vault deep-dive §5.1).
+# Informational only for now — Phase 2 will add assertions once expected
+# header values stabilize post-optimization.
+#
+# NOTE: scheduled workflows only run from the default branch (main) —
+# this activates after the sandbox PR merges.
+name: Prod Header Check
+
+on:
+  schedule:
+    # 06:30 UTC daily
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe homepage caching (expect: eventually HIT after Phase 2)
+        run: |
+          echo "== GET /en (x2 — check MISS->HIT) =="
+          curl -sSI https://www.hypeafnan.com/en | grep -iE '^HTTP/|^cache-control:|^x-vercel-cache:|^age:|^content-length:' || true
+          curl -sSI https://www.hypeafnan.com/en | grep -iE '^HTTP/|^cache-control:|^x-vercel-cache:|^age:|^content-length:' || true
+
+      - name: Probe products API caching (fix from commit 1e96770 should show s-maxage=600 once deployed)
+        run: |
+          echo "== GET /api/products?limit=1 (x2) =="
+          curl -sSI 'https://www.hypeafnan.com/api/products?limit=1' | grep -iE '^HTTP/|^cache-control:|^x-vercel-cache:|^age:' || true
+          curl -sSI 'https://www.hypeafnan.com/api/products?limit=1' | grep -iE '^HTTP/|^cache-control:|^x-vercel-cache:|^age:' || true
+
+      - name: Probe product detail page
+        run: |
+          echo "== GET /en/product/<first real product> =="
+          PID=$(curl -s 'https://www.hypeafnan.com/api/products?limit=5' | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const p=JSON.parse(d).products.find(x=>!x.isPromo);console.log(p?p.id:'')})")
+          echo "Product: ${PID:-<none found>}"
+          if [ -n "$PID" ]; then
+            curl -sSI "https://www.hypeafnan.com/en/product/$PID" | grep -iE '^HTTP/|^cache-control:|^x-vercel-cache:|^age:' || true
+          fi
