@@ -1,18 +1,20 @@
 import { notFound } from "next/navigation";
+import { setRequestLocale } from "next-intl/server";
 import ProductDetailClient from "../../../components/ProductDetailClient";
 import { getProductById } from "../../../lib/getProducts";
 import { sanityClient } from "../../../../sanity/client";
 
-// Cache pages for 24 hours (ISR) so new products appear almost instantly while still saving massive CPU
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
+// Cache pages for 24 hours (ISR) — matches the original intent above. On-demand ISR:
+// first visit renders + caches, subsequent visits served from the edge.
+export const revalidate = 86400;
 
 interface PageProps {
   params: Promise<{ locale: string; productId: string }>;
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
-  const { productId } = await params;
+  const { locale, productId } = await params;
+  setRequestLocale(locale);
 
   let product: any = undefined;
 

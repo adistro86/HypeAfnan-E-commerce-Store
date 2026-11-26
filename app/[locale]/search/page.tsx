@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import ProductGrid, { Product } from "../../components/ProductGrid";
 
@@ -26,7 +26,7 @@ function getScrollKey(searchKey: string) {
   return `scroll_snap__${searchKey}`;
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -313,5 +313,23 @@ export default function SearchPage() {
         )}
       </main>
     </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary for prerendered pages (Next.js static rendering requirement)
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex items-center gap-3 text-[#a3a8b5]">
+            <IOSSpinner />
+            <span className="text-[15px]">Loading...</span>
+          </div>
+        </div>
+      }
+    >
+      <SearchPageContent />
+    </Suspense>
   );
 }

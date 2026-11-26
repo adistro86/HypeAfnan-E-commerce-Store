@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
@@ -83,6 +84,10 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
+
+  // Enables static rendering for locale pages (next-intl requirement) —
+  // without this, every [locale] page opts into dynamic rendering
+  setRequestLocale(locale);
 
   const messages = (await import(`../../messages/${locale}.json`)).default;
 

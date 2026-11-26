@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import FilterBar from "./FilterBar";
 import ProductGrid from "./ProductGrid";
 import type { Product } from "./ProductGrid";
@@ -14,9 +14,28 @@ interface HomeClientProps {
   initialTotal: number;
 }
 
-export default function HomeClient({ initialProducts, initialTotal }: HomeClientProps) {
+// Isolated so useSearchParams()'s CSR bailout only skips THIS subtree during prerender —
+// the server-rendered product grid stays in the static HTML for SEO.
+function SearchParamSync({ onSearch }: { onSearch: (q: string) => void }) {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("search") || "";
+
+  useEffect(() => {
+    if (!searchQuery) return;
+    let active = true;
+    // Delay fetch until after render so state is flushed
+    const id = setTimeout(() => {
+      if (active) onSearch(searchQuery);
+    }, 0);
+    return () => { active = false; clearTimeout(id); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, onSearch]);
+
+  return null;
+}
+
+export default function HomeClient({ initialProducts, initialTotal }: HomeClientProps) {
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -48,19 +67,13 @@ export default function HomeClient({ initialProducts, initialTotal }: HomeClient
     }
   }, []);
 
-  // Sync search param changes from Header search
-  useEffect(() => {
-    if (!searchQuery) return;
-    let active = true;
+  // Called by SearchParamSync when the ?search= param changes (Header search)
+  const handleSearch = useCallback((q: string) => {
+    setSearchQuery(q);
     setPage(1);
     setProducts([]);
-    // Delay fetch until after render so state is flushed
-    const id = setTimeout(() => {
-      if (active) fetchPage(1, activeCategory, true, searchQuery);
-    }, 0);
-    return () => { active = false; clearTimeout(id); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+    fetchPage(1, activeCategory, true, q);
+  }, [activeCategory, fetchPage]);
 
   const handleFilterChange = useCallback((filters: {
     category: string;
@@ -100,6 +113,9 @@ export default function HomeClient({ initialProducts, initialTotal }: HomeClient
 
   return (
     <>
+      <Suspense fallback={null}>
+        <SearchParamSync onSearch={handleSearch} />
+      </Suspense>
       <FilterBar onFilterChange={handleFilterChange} />
       <ProductGrid products={products} viewMode={viewMode} loading={loading} />
 
