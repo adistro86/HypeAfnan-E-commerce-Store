@@ -224,10 +224,12 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                   images[selectedImageIdx]?.toLowerCase().endsWith(".mp4") ? (
                     <video
                       src={images[selectedImageIdx]}
+                      poster={typeof product?.coverImage === "string" ? product.coverImage : undefined}
                       controls
                       autoPlay
                       loop
                       playsInline
+                      preload="metadata"
                       className="absolute inset-0 w-full h-full object-contain bg-black"
                     />
                   ) : (
@@ -260,6 +262,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                         src={img}
                         muted
                         playsInline
+                        preload="metadata"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : (

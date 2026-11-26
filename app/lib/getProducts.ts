@@ -36,11 +36,22 @@ function applyCdn(p: Product): Product {
   }
 
   const workerUrl = "https://hypeafnan-cdn.afnanimran61.workers.dev";
+
+  // Dispatch videos/covers move off Vercel egress (754 MB in public/) onto Cloudflare R2
+  // (free storage, zero egress) once VIDEO_CDN_BASE is set. Unset = local public/ paths
+  // (dev + until the R2 migration completes), so this flag gates the cutover.
+  const videoCdnBase = process.env.VIDEO_CDN_BASE || "";
+
   const rewrite = (url: string) => {
     if (!url) return url;
-    return url
+    let u = url
       .replace("https://f005.backblazeb2.com/file/HypeAfnan-images", workerUrl)
       .replace("https://HypeAfnan-images.s3.us-east-005.backblazeb2.com", workerUrl);
+    if (videoCdnBase) {
+      // /Dispatched/... or /Dispatched Part N/... -> <VIDEO_CDN_BASE>/Dispatched.../...
+      u = u.replace(/^\/(Dispatched[^/]*)\//, `${videoCdnBase}/$1/`);
+    }
+    return u;
   };
 
   return {
